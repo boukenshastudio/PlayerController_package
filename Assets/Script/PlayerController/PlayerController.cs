@@ -4,8 +4,10 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    //移動速度
-    public float speed = 5;
+    //移動速度 最少為2
+    [Min(2)]public float speed = 5;
+    //跑時移動X倍
+    private float runSpeed = 1;
     Vector2 velocity;
 
     //Camera
@@ -16,9 +18,13 @@ public class PlayerController : MonoBehaviour
     public float sensitivity = 1;
     public float smoothing = 2;
 
+    private float moveVelocity;
+
+
     private void Awake()
     {
         camera = GetComponentInChildren<Camera>().transform;
+        moveVelocity = 0;
     }
 
     // Start is called before the first frame update
@@ -30,15 +36,30 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        keyInput();
         Move();
         CameraLock();
     }
 
+    private void keyInput()
+    {
+        if (Input.GetKeyDown(KeyCode.LeftShift))
+        {
+            runSpeed = 2f;
+        }
+        if (Input.GetKeyUp(KeyCode.LeftShift))
+        {
+            runSpeed = 1f;
+        }
+    }
+
     void Move()
     {
-        velocity.y = Input.GetAxis("Vertical") * speed * Time.deltaTime;
-        velocity.x = Input.GetAxis("Horizontal") * speed * Time.deltaTime;
+        velocity.y = Input.GetAxis("Vertical") * speed * runSpeed * Time.deltaTime;
+        velocity.x = Input.GetAxis("Horizontal") * speed * runSpeed * Time.deltaTime;
         transform.Translate(velocity.x, 0, velocity.y);
+        if(velocity.y != 0.0f)
+            moveVelocity = velocity.y;
     }
 
     void CameraLock()
@@ -54,5 +75,9 @@ public class PlayerController : MonoBehaviour
         transform.localRotation = Quaternion.AngleAxis(currentMouseLook.x, Vector3.up);
     }
 
+    public float GetMoveVelocity()
+    {
+        return velocity.y > 0 ? moveVelocity : 0;
+    }
 
 }

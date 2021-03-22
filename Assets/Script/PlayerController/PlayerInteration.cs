@@ -9,7 +9,7 @@ public class PlayerInteration : MonoBehaviour
     void InterationObj(GameObject item)
     {
         forcusItem = item;
-        Debug.Log(item.name);
+        //Debug.Log(item.name);
     }
 
     private void OnTriggerEnter(Collider other)

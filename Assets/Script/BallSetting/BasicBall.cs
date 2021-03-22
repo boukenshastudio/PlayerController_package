@@ -11,54 +11,57 @@ public enum BallType
 [RequireComponent(typeof(Rigidbody))]
 public abstract class BasicBall : MonoBehaviour
 {
-    Light lightSource;
-    Material ballMat;
-    Rigidbody rb;
-    [SerializeField] Color lightColor;
+    protected BallFactory manager;
+
+    protected Light lightSource;
+    protected Material ballMat;
+    protected Rigidbody rb;
+    [SerializeField]
+    protected Color lightColor;
 
     //Ball亮度等級
     public int lightLevel = 1;
     //是否在拋出狀態
     public bool isThrow = false;
     //是否在地上
-    bool onGrand = false;
+    protected bool onGrand = false;
 
     //拋出時的力度
     public float throwRange = 10f;
 
     //淡化設定
-    Color fadeColor;
+    protected Color fadeColor;
     //淡化時間
     public float fadeSec_Static = 3.0f;
-    private float fadeSec_Dynamic;
+    protected float fadeSec_Dynamic;
 
-    void ShowLight() {
+    public void SetManager(BallFactory factory)
+    {
+        if (manager != null)
+            return;
+        manager = factory;
+    }
+
+    protected void ShowLight() {
         lightSource.enabled = true;
         SetLightColor(lightColor);
     }
 
-    void HideLight()
+    protected void HideLight()
     {
         lightSource.enabled = false;
         SetLightColor(Color.black);
     }
 
-    void SetLightColor(Color color)
+    protected void SetLightColor(Color color)
     {
         ballMat.SetColor("_EmissionColor", color);
         lightSource.color = color;
     }
 
-    public void Throwing(Transform throwAngle)
-    {
-        isThrow = true;
-        GetComponent<SphereCollider>().isTrigger = false;
-        this.transform.parent = null;
-        ShowLight();
-        rb.isKinematic = false;
-        rb.useGravity = true;
-        GetComponent<Rigidbody>().AddForce(throwAngle.forward * throwRange, ForceMode.Impulse);
-    }
+    public abstract void Throwing(Transform throwAngle);
+
+    public abstract void Throwing(Transform throwAngle,float runSpeed, float holdTime);
 
     //淡化亮度
     public void FadeLight(float fadeTime)
@@ -74,21 +77,36 @@ public abstract class BasicBall : MonoBehaviour
             SetLightColor(fadeColor);
         }else
         {
-            //最暗時刪除物件
-            Destroy(this.gameObject);
+            FadeEnd();
         }
     }
 
-    private void Awake()
+    protected void FadeEnd() {
+        //淡化最終時刪除自身
+        //SelfDelete();
+    }
+
+    protected void SelfDelete()
+    {
+        //最暗時刪除物件
+        if (manager == null)
+        {
+            GameObject.FindObjectOfType<BallFactory>().DeleteBall(this.gameObject);
+        }
+        else
+        {
+            manager.DeleteBall(this.gameObject);
+        }
+    }
+
+    protected void Init()
     {
         rb = transform.GetComponent<Rigidbody>();
         lightSource = transform.GetComponentInChildren<Light>();
         ballMat = transform.GetComponent<Renderer>().material;
     }
 
-
-    // Start is called before the first frame update
-    void Start()
+    protected void StartInit()
     {
         rb.useGravity = false;
         lightSource.range = lightLevel * 5;
@@ -97,8 +115,7 @@ public abstract class BasicBall : MonoBehaviour
         HideLight();
     }
 
-    // Update is called once per frame
-    void Update()
+    protected void Updating()
     {
         if (onGrand)
         {
@@ -106,10 +123,48 @@ public abstract class BasicBall : MonoBehaviour
         }
     }
 
-    void OnCollisionEnter(Collision collision){
+    protected void Awake()
+    {
+        Init();
+    }
+
+
+    // Start is called before the first frame update
+    protected void Start()
+    {
+        StartInit();
+    }
+
+    // Update is called once per frame
+    protected void Update()
+    {
+        Updating();
+    }
+
+    protected void OnCollisionEnter(Collision collision){
         if (collision.collider.CompareTag("Grand") && !onGrand)
         {
             onGrand = true;
         }
+
+        //執波並刪除自身
+        if(collision.collider.CompareTag("Player") && onGrand)
+        {
+            collision.gameObject.GetComponent<BallController>().IncreaseBallStore(1);
+            SelfDelete();
+        }
+    }
+
+    protected void OnTriggerStay(Collider collider)
+    {
+        //搜尋道具,範圍依Trigger大小(暫設 5 )
+        if (onGrand && collider.CompareTag("Item"))
+        {
+            //發光
+            //collider.GetComponent <?> ().functionName();
+
+            Debug.Log(collider.name);
+        }
+
     }
 }
